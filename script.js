@@ -153,9 +153,10 @@ class Flock {
 
 }
 
-let f = new Flock([]);
 // Populate flock
-const POPULATION_SIZE = Math.floor(window.innerHeight * window.innerWidth / 2000);
+let f = new Flock([]);
+const POPULATION_SIZE = Math.floor(window.innerHeight * window.innerWidth / 4000);
+
 for (let i = 0; i < POPULATION_SIZE; i++) {
   let x = Math.random() * window.innerWidth;
   let y = Math.random() * window.innerHeight;
@@ -163,13 +164,20 @@ for (let i = 0; i < POPULATION_SIZE; i++) {
   f.population.push(new Boid(x, y, v));
 }
 
+// Animate
+let lastRender = 0;
+const fps = 90;
+
 function animate() {
   requestAnimationFrame(animate);
-  ctx.clearRect(0, 0, innerWidth, innerHeight);
-  f.render(ctx);
-  f.update();
+  let now = Date.now();
+  if (Date.now() > lastRender + 1000 / fps) {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    f.render(ctx);
+    f.update();
+    lastRender = now;
+  }
 }
-
 animate();
 
 

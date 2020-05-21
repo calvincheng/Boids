@@ -7,11 +7,12 @@
 h1 {
   margin: 48px;
   position: absolute;
-  z-index: 99;
   color: white;
+  font-size: 1.5rem;
   font-family: Helvetica, sans-serif;
   font-weight: 400;
-  letter-spacing: 4px;
+  letter-spacing: 0.3rem;
+  z-index: 99;
 }
 
 #canvas {
