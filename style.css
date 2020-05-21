@@ -4,6 +4,16 @@
   overflow: auto;
 }
 
+h1 {
+  margin: 48px;
+  position: absolute;
+  z-index: 99;
+  color: white;
+  font-family: Helvetica, sans-serif;
+  font-weight: 400;
+  letter-spacing: 4px;
+}
+
 #canvas {
   position: absolute;
   height: 100%;

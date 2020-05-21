@@ -8,14 +8,13 @@ canvasElement.width = window.innerWidth; // * scale;
 canvasElement.height = window.innerHeight; // * scale;
 
 function rotate(point, center, angle) {
-  let x1 = point[0] - center[0];
-  let y1 = point[1] - center[1];
-
-  let x2 = x1 * Math.cos(angle) - y1 * Math.sin(angle);
-  let y2 = x1 * Math.sin(angle) - y1 * Math.cos(angle);
-
-  let rotatedPoint = [x2 + center[0], y2 + center[1]];
-  return rotatedPoint;
+  let x = center[0] 
+          + (point[0] - center[0]) * Math.cos(angle) 
+          - (point[1] - center[1]) * Math.sin(angle);
+  let y = center[1] 
+          + (point[0] - center[0]) * Math.sin(angle) 
+          - (point[1] - center[1]) * Math.cos(angle);
+  return [x, y];
 }
 
 class Boid {
@@ -26,29 +25,13 @@ class Boid {
   }
 
   draw(ctx) {
-    const width = 8;
-    const height = 12;
-
-    let angle = Math.atan2(this.v[1], this.v[0])
-
-//     let v1 = [this.x, this.y - height / 2];
-//     let v2 = [this.x - width / 2, this.y + height / 2];
-//     let v3 = [this.x + width / 2, this.y + height / 2];
-// 
-//     ctx.beginPath();
-//     ctx.moveTo(...v1);
-//     ctx.lineTo(...v2);
-//     ctx.lineTo(...v3);
-//     ctx.lineTo(...v1);
-//     ctx.closePath();
-
+    const radius = 4;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 4, 0, 2*Math.PI, false);
+    ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI, false);
     ctx.closePath();
 
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#eee';
     ctx.fill();
-    
   }
 }
 
@@ -65,14 +48,38 @@ class Flock {
 
   update() {
     for (let boid of this.population) {
+      const speedLimit = 2;
+      // Calculate forces
       let dv_coh = this.calcCohesion(boid);
       let dv_sep = this.calcSeparation(boid);
-      let dv_ali = [0, 0]; //this.calcAlignment(boid);
-      boid.v[0] += (dv_coh[0] + dv_sep[0] + dv_ali[0]);
-      boid.v[1] += (dv_coh[1] + dv_sep[1] + dv_ali[1]);
+      let dv_ali = this.calcAlignment(boid);
 
+      // Apply forces
+      boid.v[0] += (0.001 * dv_coh[0] + 0.01 * dv_sep[0] + 0.05 * dv_ali[0]);
+      boid.v[1] += (0.001 * dv_coh[1] + 0.01 * dv_sep[1] + 0.05 * dv_ali[1]);
+
+      // Enforce speed limits
+      if (boid.v[0] > speedLimit) {
+        boid.v[0] = speedLimit;
+      } else if (boid.v[0] < -speedLimit) {
+        boid.v[0] = -speedLimit;
+      }
+
+      if (boid.v[1] > speedLimit) {
+        boid.v[1] = speedLimit;
+      } else if (boid.v[1] < -speedLimit) {
+        boid.v[1] = -speedLimit;
+      }
+
+      // Update positions
       boid.x += boid.v[0];
       boid.y += boid.v[1];
+      if (boid.x <= 0 || boid.x >= window.innerWidth) {
+        boid.x = (boid.x + window.innerWidth) % window.innerWidth;
+      }
+      if (boid.y <= 0 || boid.y >= window.innerHeight) {
+        boid.y = (boid.y + window.innerHeight) % window.innerHeight;
+      }
     }
   }
 
@@ -80,18 +87,25 @@ class Flock {
     // Calculates cohesive force to boid
     let meanX = 0;
     let meanY = 0;
+    let count = 0;
 
     for (let otherBoid of this.population) {
       if (otherBoid === boid) continue;
-      meanX += otherBoid.x;
-      meanY += otherBoid.y;
+
+      let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
+      if (dist < 60) {
+        meanX += otherBoid.x;
+        meanY += otherBoid.y;
+        count += 1;
+      }
     }
 
-    meanX /= (this.population.length - 1);
-    meanY /= (this.population.length - 1);
-
-    let dv = [(meanX - boid.x) / 1000, (meanY - boid.y) / 1000];
-    return dv;
+    if (count > 0) {
+      meanX /= (count);
+      meanY /= (count);
+      return [meanX - boid.x, meanY - boid.y];
+    }
+    return [0, 0];
   }
 
   calcSeparation(boid) {
@@ -102,10 +116,10 @@ class Flock {
       if (otherBoid === boid) continue;
       let dist = Math.sqrt( (otherBoid.x - boid.x) ** 2 
                             + (otherBoid.y - boid.y) ** 2 );
-      if (dist <= 5) {
+      if (dist > 0 && dist <= 8) {
         // Add to repelling force if neighbour boid is too close
-        dv[0] += ((boid.x - otherBoid.x) / 500);
-        dv[1] += ((boid.y - otherBoid.y) / 500);
+        dv[0] += ((boid.x - otherBoid.x) / dist);
+        dv[1] += ((boid.y - otherBoid.y) / dist);
       }
     }
 
@@ -116,34 +130,36 @@ class Flock {
     // Calculates alignment force to boid
     let meanVx = 0;
     let meanVy = 0;
+    let count = 0;
 
     for (let otherBoid of this.population) {
       if (otherBoid === boid) continue;
 
-      let dist = Math.sqrt( (otherBoid.x - boid.x) ** 2 
-                            + (otherBoid.y - boid.y) ** 2 );
-      if (dist <= 400) {
+      let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
+      if (dist <= 60) {
         meanVx += otherBoid.v[0];
         meanVy += otherBoid.v[1];
+        count += 1;
       }
-
-    meanVx /= (this.population.length - 1);
-    meanVy /= (this.population.length - 1);
     }
 
-    let dv = [meanVx / 200, meanVy / 200];
-    return dv;
+    if (count > 0) {
+      meanVx /= count;
+      meanVy /= count;
+      return [meanVx, meanVy];
+    }
+    return [0, 0];
   }
 
 }
 
 let f = new Flock([]);
 // Populate flock
-const POPULATION_SIZE = 30;
+const POPULATION_SIZE = Math.floor(window.innerHeight * window.innerWidth / 2000);
 for (let i = 0; i < POPULATION_SIZE; i++) {
-  let x = 300 + Math.random(); //Math.random() * window.innerWidth;
-  let y = 300 + Math.random(); //Math.random() * window.innerHeight;
-  let v = [1, 0]; //[Math.random() * 3 - 1.5, Math.random() * 3 - 1.5];
+  let x = Math.random() * window.innerWidth;
+  let y = Math.random() * window.innerHeight;
+  let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
   f.population.push(new Boid(x, y, v));
 }
 
