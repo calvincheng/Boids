@@ -20,9 +20,18 @@ function rotate(point, center, angle) {
 }
 
 let mouse = {
-  x: 0,
-  y: 0,
-  radius: 24,
+  radius: 22,
+  x: -this.radius,
+  y: -this.radius,
+
+  draw(ctx) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius,  0, 2 * Math.PI, false);
+    ctx.closePath();
+
+    ctx.strokeStyle = '#dedede';
+    ctx.stroke();
+  }
 }
 
 class Boid {
@@ -110,7 +119,7 @@ class Flock {
       if (otherBoid === boid) continue;
 
       let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
-      if (dist > 8 && dist < 60) {
+      if (dist > 8 && dist < 40) {
         meanX += otherBoid.x;
         meanY += otherBoid.y;
         count += 1;
@@ -153,7 +162,7 @@ class Flock {
       if (otherBoid === boid) continue;
 
       let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
-      if (dist <= 60) {
+      if (dist <= 40) {
         meanVx += otherBoid.v[0];
         meanVy += otherBoid.v[1];
         count += 1;
@@ -207,6 +216,7 @@ function animate() {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     f.render(ctx);
     f.update();
+    mouse.draw(ctx);
     lastRender = now;
   }
 }
@@ -242,14 +252,12 @@ window.onresize = function() {
       f.population.pop();
     }
   }
-  console.log(populationSize, f.population.length);
   
   // Resume animation
   animate();
 }
 
-// Get mouse position
-
+// Mouse events
 window.addEventListener('mousemove', function(e) {
   mouse.x = e.x;
   mouse.y = e.y;
