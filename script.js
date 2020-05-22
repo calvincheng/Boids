@@ -25,7 +25,7 @@ class Boid {
   }
 
   draw(ctx) {
-    const radius = 4;
+    const radius = 3;
     ctx.beginPath();
     ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI, false);
     ctx.closePath();
@@ -55,8 +55,8 @@ class Flock {
       let dv_ali = this.calcAlignment(boid);
 
       // Apply forces
-      boid.v[0] += (0.001 * dv_coh[0] + 0.01 * dv_sep[0] + 0.05 * dv_ali[0]);
-      boid.v[1] += (0.001 * dv_coh[1] + 0.01 * dv_sep[1] + 0.05 * dv_ali[1]);
+      boid.v[0] += (0.003 * dv_coh[0] + 0.1 * dv_sep[0] + 0.08 * dv_ali[0] + Math.random() * 0.6 - 0.3);
+      boid.v[1] +=  (0.003 * dv_coh[1] + 0.1 * dv_sep[1] + 0.08 * dv_ali[1] + Math.random() * 0.6 - 0.3);
 
       // Enforce speed limits
       if (boid.v[0] > speedLimit) {
@@ -93,7 +93,7 @@ class Flock {
       if (otherBoid === boid) continue;
 
       let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
-      if (dist < 60) {
+      if (dist > 8 && dist < 60) {
         meanX += otherBoid.x;
         meanY += otherBoid.y;
         count += 1;
@@ -116,7 +116,7 @@ class Flock {
       if (otherBoid === boid) continue;
       let dist = Math.sqrt( (otherBoid.x - boid.x) ** 2 
                             + (otherBoid.y - boid.y) ** 2 );
-      if (dist > 0 && dist <= 8) {
+      if (dist <= 14) {
         // Add to repelling force if neighbour boid is too close
         dv[0] += ((boid.x - otherBoid.x) / dist);
         dv[1] += ((boid.y - otherBoid.y) / dist);
@@ -153,9 +153,11 @@ class Flock {
 
 }
 
+/**** DRIVER CODE ****/
+
 // Populate flock
 let f = new Flock([]);
-const POPULATION_SIZE = Math.floor(window.innerHeight * window.innerWidth / 4000);
+const POPULATION_SIZE = Math.floor(window.innerHeight * window.innerWidth / 3000);
 
 for (let i = 0; i < POPULATION_SIZE; i++) {
   let x = Math.random() * window.innerWidth;
@@ -167,17 +169,50 @@ for (let i = 0; i < POPULATION_SIZE; i++) {
 // Animate
 let lastRender = 0;
 const fps = 90;
+let rAF = requestAnimationFrame(animate);
 
 function animate() {
   requestAnimationFrame(animate);
   let now = Date.now();
-  if (Date.now() > lastRender + 1000 / fps) {
+  if (now > lastRender + 1000 / fps) {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     f.render(ctx);
     f.update();
     lastRender = now;
   }
 }
+
 animate();
+
+// Handle window resizing
+window.onresize = function() {
+  // Stop animation
+  cancelAnimationFrame(rAF);
+
+  // Resize canvas
+  canvasElement.width = window.innerWidth;
+  canvasElement.height = window.innerHeight;
+
+  // Adjust population
+  let populationDeficit = (window.innerHeight * window.innerWidth / 3000) 
+                          - f.population.length;
+  if (populationDeficit > 0) {
+    // Not enough boids -- add
+    for (let i = 0; i < populationDeficit; i++) {
+      let x = Math.random() * window.innerWidth;
+      let y = Math.random() * window.innerHeight;
+      let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
+      f.population.push(new Boid(x, y, v));
+    }
+  } else {
+    // Too many boids -- remove
+    for (let i = populationDeficit; i < 0; i++) {
+      f.population.pop();
+    }
+  }
+  
+  // Resume animation
+  animate();
+}
 
 
