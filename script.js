@@ -11,10 +11,18 @@ function rotate(point, center, angle) {
   let x = center[0] 
           + (point[0] - center[0]) * Math.cos(angle) 
           - (point[1] - center[1]) * Math.sin(angle);
+
   let y = center[1] 
           + (point[0] - center[0]) * Math.sin(angle) 
           - (point[1] - center[1]) * Math.cos(angle);
+
   return [x, y];
+}
+
+let mouse = {
+  x: 0,
+  y: 0,
+  radius: 24,
 }
 
 class Boid {
@@ -50,13 +58,22 @@ class Flock {
     for (let boid of this.population) {
       const speedLimit = 2;
       // Calculate forces
+
+      // Base rules
       let dv_coh = this.calcCohesion(boid);
       let dv_sep = this.calcSeparation(boid);
       let dv_ali = this.calcAlignment(boid);
 
+      // Added rules
+      let dv_mou = this.calcMouseAvoidance(boid);
+
       // Apply forces
-      boid.v[0] += (0.003 * dv_coh[0] + 0.1 * dv_sep[0] + 0.08 * dv_ali[0] + Math.random() * 0.6 - 0.3);
-      boid.v[1] +=  (0.003 * dv_coh[1] + 0.1 * dv_sep[1] + 0.08 * dv_ali[1] + Math.random() * 0.6 - 0.3);
+      boid.v[0] += (0.003 * dv_coh[0] + 0.1 * dv_sep[0] 
+                    + 0.08 * dv_ali[0] + 0.1 * dv_mou[0] 
+                    + Math.random() * 0.6 - 0.3);
+      boid.v[1] += (0.003 * dv_coh[1] + 0.1 * dv_sep[1] 
+                    + 0.08 * dv_ali[1] + 0.1 * dv_mou[1] 
+                    + Math.random() * 0.6 - 0.3);
 
       // Enforce speed limits
       if (boid.v[0] > speedLimit) {
@@ -118,8 +135,8 @@ class Flock {
                             + (otherBoid.y - boid.y) ** 2 );
       if (dist <= 14) {
         // Add to repelling force if neighbour boid is too close
-        dv[0] += ((boid.x - otherBoid.x) / dist);
-        dv[1] += ((boid.y - otherBoid.y) / dist);
+        dv[0] += (boid.x - otherBoid.x) / dist;
+        dv[1] += (boid.y - otherBoid.y) / dist;
       }
     }
 
@@ -151,15 +168,27 @@ class Flock {
     return [0, 0];
   }
 
+  calcMouseAvoidance(boid) {
+    // Calculates force needed to avoid mouse
+    let dist = Math.sqrt((mouse.x - boid.x)**2 + (mouse.y - boid.y)**2);
+    if (dist < mouse.radius) {
+      return [boid.x - mouse.x, boid.y - mouse.y];
+    }
+    return [0, 0];
+  }
+
 }
 
 /**** DRIVER CODE ****/
 
 // Populate flock
 let f = new Flock([]);
-const POPULATION_SIZE = Math.floor(window.innerHeight * window.innerWidth / 3000);
+const populationDensity = 3000;
+let populationSize = Math.floor(
+  window.innerHeight * window.innerWidth / populationDensity
+);
 
-for (let i = 0; i < POPULATION_SIZE; i++) {
+for (let i = 0; i < populationSize; i++) {
   let x = Math.random() * window.innerWidth;
   let y = Math.random() * window.innerHeight;
   let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
@@ -194,8 +223,11 @@ window.onresize = function() {
   canvasElement.height = window.innerHeight;
 
   // Adjust population
-  let populationDeficit = (window.innerHeight * window.innerWidth / 3000) 
-                          - f.population.length;
+  populationSize = Math.floor(
+    window.innerHeight * window.innerWidth / populationDensity
+  );
+  let populationDeficit = populationSize - f.population.length;
+
   if (populationDeficit > 0) {
     // Not enough boids -- add
     for (let i = 0; i < populationDeficit; i++) {
@@ -210,9 +242,22 @@ window.onresize = function() {
       f.population.pop();
     }
   }
+  console.log(populationSize, f.population.length);
   
   // Resume animation
   animate();
 }
+
+// Get mouse position
+
+window.addEventListener('mousemove', function(e) {
+  mouse.x = e.x;
+  mouse.y = e.y;
+});
+
+window.addEventListener('click', function(e) {
+  let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
+  f.population.push(new Boid(mouse.x, mouse.y, v));
+});
 
 
