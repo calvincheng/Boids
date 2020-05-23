@@ -29,7 +29,7 @@ let mouse = {
     ctx.arc(this.x, this.y, this.radius,  0, 2 * Math.PI, false);
     ctx.closePath();
 
-    ctx.strokeStyle = '#dedede';
+    ctx.strokeStyle = '#fff';
     ctx.stroke();
   }
 }
@@ -68,10 +68,10 @@ class Boid {
     
     // Calculate vertices for triangle
     let center = [this.x, this.y];
-    let _v1 = [this.x, this.y - this.length];
-    let v1 = rotate(_v1, center, Math.PI + this.angle)
-    let v2 = rotate(_v1, center, this.theta + this.angle);
-    let v3 = rotate(_v1, center, -this.theta + this.angle);
+    let _v = [this.x, this.y - this.length]; // "base" vector
+    let v1 = rotate(_v, center, Math.PI + this.angle)
+    let v2 = rotate(_v, center, this.theta + this.angle);
+    let v3 = rotate(_v, center, -this.theta + this.angle);
 
     // Draw
     ctx.beginPath();
@@ -99,14 +99,11 @@ class Flock {
   update() {
     for (let boid of this.population) {
       const speedLimit = 2;
-      // Calculate forces
 
-      // Base rules
+      // Calculate forces
       let dv_coh = this.calcCohesion(boid);
       let dv_sep = this.calcSeparation(boid);
       let dv_ali = this.calcAlignment(boid);
-
-      // Added rules
       let dv_mou = this.calcMouseAvoidance(boid);
 
       // Apply forces
@@ -133,6 +130,8 @@ class Flock {
       // Update positions
       boid.x += boid.v[0];
       boid.y += boid.v[1];
+
+      // Wrap-around borders
       if (boid.x <= 0 || boid.x >= window.innerWidth) {
         boid.x = (boid.x + window.innerWidth) % window.innerWidth;
       }
