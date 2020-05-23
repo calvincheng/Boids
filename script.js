@@ -42,13 +42,35 @@ class Boid {
   }
 
   draw(ctx) {
-    const radius = 3;
+//     const radius = 3;
+//     ctx.beginPath();
+//     ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI, false);
+//     ctx.closePath();
+
+//     ctx.fillStyle = '#eee';
+//     ctx.fill();
+
+    let angle = Math.atan2(this.v[1], this.v[0]);
+
+    if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
+      angle += Math.PI;
+    }
+    
+    const length = 8;
+    let center = [this.x, this.y];
+    let _v1 = [this.x, this.y - length];
+    let v1 = rotate(_v1, center, Math.PI + angle)
+    let v2 = rotate(_v1, center, (25 * Math.PI / 180) + angle);
+    let v3 = rotate(_v1, center, (-25 * Math.PI / 180) + angle);
+
     ctx.beginPath();
-    ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI, false);
+    ctx.moveTo(...v1);
+    ctx.lineTo(...v2);
+    ctx.lineTo(...v3);
     ctx.closePath();
 
-    ctx.fillStyle = '#eee';
-    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
   }
 }
 
@@ -77,10 +99,10 @@ class Flock {
       let dv_mou = this.calcMouseAvoidance(boid);
 
       // Apply forces
-      boid.v[0] += (0.003 * dv_coh[0] + 0.1 * dv_sep[0] 
+      boid.v[0] += (0.003 * dv_coh[0] + 0.5 * dv_sep[0] 
                     + 0.08 * dv_ali[0] + 0.1 * dv_mou[0] 
                     + Math.random() * 0.6 - 0.3);
-      boid.v[1] += (0.003 * dv_coh[1] + 0.1 * dv_sep[1] 
+      boid.v[1] += (0.003 * dv_coh[1] + 0.5 * dv_sep[1] 
                     + 0.08 * dv_ali[1] + 0.1 * dv_mou[1] 
                     + Math.random() * 0.6 - 0.3);
 
@@ -142,7 +164,7 @@ class Flock {
       if (otherBoid === boid) continue;
       let dist = Math.sqrt( (otherBoid.x - boid.x) ** 2 
                             + (otherBoid.y - boid.y) ** 2 );
-      if (dist <= 14) {
+      if (dist <= 18) {
         // Add to repelling force if neighbour boid is too close
         dv[0] += (boid.x - otherBoid.x) / dist;
         dv[1] += (boid.y - otherBoid.y) / dist;
