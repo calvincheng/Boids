@@ -1,4 +1,4 @@
-<img src="/Users/calvincheng/Documents/compsci/projects/boids/screen.png" alt="screen" style="width: 100%" />
+<img src="./screen.png" alt="screen" style="width: 100%" />
 
 # Boids
 
