@@ -39,30 +39,41 @@ class Boid {
     this.x = x;
     this.y = y;
     this.v = v;
+    this.angle = Math.atan2(this.v[1], this.v[0]);
+    if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
+      this.angle = (this.angle + Math.PI) % (2 * Math.PI);
+    }
+
+    // Physical features
+    this.length = 8;
+    this.theta = 25 * Math.PI / 180;
   }
 
   draw(ctx) {
-//     const radius = 3;
-//     ctx.beginPath();
-//     ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI, false);
-//     ctx.closePath();
-
-//     ctx.fillStyle = '#eee';
-//     ctx.fill();
-
-    let angle = Math.atan2(this.v[1], this.v[0]);
-
+    // Calculate orientation
+    let newAngle = Math.atan2(this.v[1], this.v[0]);
     if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
-      angle += Math.PI;
+      newAngle = (newAngle + Math.PI) % (2 * Math.PI);
+    }
+
+    // Limit turn speed
+    let angleDiff = newAngle - this.angle;
+    if (angleDiff > 0.15) {
+      this.angle += 0.15;
+    } else if (angleDiff < -0.15) {
+      this.angle -= 0.15
+    } else {
+      this.angle += angleDiff;
     }
     
-    const length = 8;
+    // Calculate vertices for triangle
     let center = [this.x, this.y];
-    let _v1 = [this.x, this.y - length];
-    let v1 = rotate(_v1, center, Math.PI + angle)
-    let v2 = rotate(_v1, center, (25 * Math.PI / 180) + angle);
-    let v3 = rotate(_v1, center, (-25 * Math.PI / 180) + angle);
+    let _v1 = [this.x, this.y - this.length];
+    let v1 = rotate(_v1, center, Math.PI + this.angle)
+    let v2 = rotate(_v1, center, this.theta + this.angle);
+    let v3 = rotate(_v1, center, -this.theta + this.angle);
 
+    // Draw
     ctx.beginPath();
     ctx.moveTo(...v1);
     ctx.lineTo(...v2);
