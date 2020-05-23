@@ -13,6 +13,21 @@ div {
   z-index: 10;
 }
 
+h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.3rem;
+  margin-bottom: 1.6rem;;
+}
+
+p {
+  font-weight: 300;
+  font-size: 1rem;
+  padding-left: 1px;
+  padding-bottom: 3px;
+  letter-spacing: 0.05rem;
+}
+
 .text-wrapper {
   width: 180px;
   margin: 40px;
@@ -37,26 +52,16 @@ div {
   fill: #bfbfbf;
 }
 
-
-h1 {
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: 0.3rem;
-  margin-bottom: 1.6rem;;
-}
-
-p {
-  font-weight: 300;
-  font-size: 1rem;
-  padding-left: 1px;
-  padding-bottom: 3px;
-  letter-spacing: 0.05rem;
-}
-
 #canvas {
   position: absolute;
   height: 100%;
   width: 100%;
   background-color: lightcoral;
   box-sizing: border-box;
+}
+
+@media screen and (max-width: 320px) {
+  .text-wrapper p {
+    display: none;
+  }
 }
