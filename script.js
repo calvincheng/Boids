@@ -8,6 +8,8 @@ canvasElement.width = window.innerWidth; // * scale;
 canvasElement.height = window.innerHeight; // * scale;
 
 function rotate(point, center, angle) {
+  // Rotates a point with respect to a given center by an angle
+  // Angle in radians
   let x = center[0] 
           + (point[0] - center[0]) * Math.cos(angle) 
           - (point[1] - center[1]) * Math.sin(angle);
@@ -19,14 +21,66 @@ function rotate(point, center, angle) {
   return [x, y];
 }
 
+class Vector2D {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  add(otherVector) {
+    if (!otherVector instanceof Vector2D) {
+      throw (new TypeError('Argument must be a 2D Vector.'));
+      return;
+    }
+    let newX = this.x + otherVector.x;
+    let newY = this.y + otherVector.y;
+    return new Vector2D(newX, newY);
+  }
+
+  sub(otherVector) {
+    return this.add(otherVector.mul(-1));
+  }
+
+  mul(A) {
+    // Performs scalar (dot) multiplication by A
+    try {
+      let newX = this.x * A;
+      let newY = this.y * A;
+      return new Vector2D(newX, newY);
+    } catch {
+      throw (new TypeError('Argument must be a scalar number'));
+      return;
+    }
+  }
+
+  div(A) {
+    return this.mul(1 / A);
+  }
+
+  magnitude() {
+    return Math.sqrt(this.x**2 + this.y**2);
+  }
+
+  angle() {
+    return Math.atan2(this.y, this.x);
+  }
+
+  normalise() {
+    // Returns unit vector
+    let magnitude = this.magnitude();
+    let newX = this.x / magnitude;
+    let newY = this.y / magnitude;
+    return new Vector2D(newX, newY);
+  }
+}
+
 let mouse = {
   radius: 22,
-  x: -this.radius,
-  y: -this.radius,
+  pos: new Vector2D(-this.radius, -this.radius),
 
   draw(ctx) {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius,  0, 2 * Math.PI, false);
+    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI, false);
     ctx.closePath();
 
     ctx.strokeStyle = '#fff';
@@ -35,15 +89,10 @@ let mouse = {
 }
 
 class Boid {
-  constructor(x, y, v) {
-    this.x = x;
-    this.y = y;
-    this.v = v;
-    this.angle = Math.atan2(this.v[1], this.v[0]);
-    // Hacky fix based off of observation -- TODO: look into atan2 vs atan
-    if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
-      this.angle = (this.angle + Math.PI) % (2 * Math.PI);
-    }
+  constructor(x, y, vx, vy) {
+    this.pos = new Vector2D(x, y);
+    this.vel = new Vector2D(vx, vy);
+    this.angle = this.vel.angle();
 
     // Physical features
     this.length = 8;
@@ -52,11 +101,7 @@ class Boid {
 
   draw(ctx) {
     // Calculate orientation
-    let newAngle = Math.atan2(this.v[1], this.v[0]);
-    // Hacky fix based off of observation -- TODO: look into atan2 vs atan
-    if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
-      newAngle = (newAngle + Math.PI) % (2 * Math.PI);
-    }
+    let newAngle = this.vel.angle();
 
     // Limit turn speed
     let angleDiff = newAngle - this.angle;
@@ -69,11 +114,11 @@ class Boid {
     }
     
     // Calculate vertices for triangle
-    let center = [this.x, this.y];
-    let _v = [this.x, this.y - this.length]; // "base" vector
-    let v1 = rotate(_v, center, Math.PI + this.angle)
-    let v2 = rotate(_v, center, this.theta + this.angle);
-    let v3 = rotate(_v, center, -this.theta + this.angle);
+    let center = [this.pos.x, this.pos.y];
+    let _v = [this.pos.x + this.length, this.pos.y]; // "base" vector
+    let v1 = rotate(_v, center, this.angle)
+    let v2 = rotate(_v, center, this.theta + Math.PI + this.angle);
+    let v3 = rotate(_v, center, -this.theta + Math.PI + this.angle);
 
     // Draw
     ctx.beginPath();
@@ -108,158 +153,106 @@ class Flock {
       let dv_ali = this.calcAlignment(boid);
       let dv_mou = this.calcMouseAvoidance(boid);
 
+
       // Apply forces
-      boid.v[0] += (0.003 * dv_coh[0] + 0.5 * dv_sep[0] 
-                    + 0.08 * dv_ali[0] + 0.1 * dv_mou[0])
-//                    + Math.random() * 0.6 - 0.3);
-      boid.v[1] += (0.003 * dv_coh[1] + 0.5 * dv_sep[1] 
-                    + 0.08 * dv_ali[1] + 0.1 * dv_mou[1] )
-//                    + Math.random() * 0.6 - 0.3);
+      boid.vel = boid.vel.add(dv_coh.mul(0.002)
+                              .add(dv_sep.mul(0.1))
+                              .add(dv_ali.mul(0.2))
+                              .add(dv_mou.mul(0.1)) 
+                             );
 
       // Enforce speed limits
-      if (boid.v[0] > speedLimit) {
-        boid.v[0] = speedLimit;
-      } else if (boid.v[0] < -speedLimit) {
-        boid.v[0] = -speedLimit;
-      }
-
-      if (boid.v[1] > speedLimit) {
-        boid.v[1] = speedLimit;
-      } else if (boid.v[1] < -speedLimit) {
-        boid.v[1] = -speedLimit;
+      if (boid.vel.magnitude() > speedLimit) {
+        boid.vel = boid.vel.normalise().mul(speedLimit);
       }
 
       // Update positions
-      boid.x += boid.v[0];
-      boid.y += boid.v[1];
+      boid.pos = boid.pos.add(boid.vel);
 
       // Wrap-around borders
-      if (boid.x <= 0 || boid.x >= window.innerWidth) {
-        boid.x = (boid.x + window.innerWidth) % window.innerWidth;
+      if (boid.pos.x <= 0 || boid.pos.x >= window.innerWidth) {
+        boid.pos.x = (boid.pos.x + window.innerWidth) % window.innerWidth;
       }
-      if (boid.y <= 0 || boid.y >= window.innerHeight) {
-        boid.y = (boid.y + window.innerHeight) % window.innerHeight;
+      if (boid.pos.y <= 0 || boid.pos.y >= window.innerHeight) {
+        boid.pos.y = (boid.pos.y + window.innerHeight) % window.innerHeight;
       }
     }
   }
 
   calcCohesion(boid) {
     // Calculates cohesive force to boid
-    let meanX = 0;
-    let meanY = 0;
+    let meanPos = new Vector2D(0, 0);
     let count = 0;
 
     for (let otherBoid of this.population) {
       if (otherBoid === boid) continue;
 
-      let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
+      let dist = (otherBoid.pos.sub(boid.pos)).magnitude();
       if (dist > 8 && dist < 40) {
-        meanX += otherBoid.x;
-        meanY += otherBoid.y;
+        meanPos = meanPos.add(otherBoid.pos);
         count += 1;
       }
     }
 
     if (count > 0) {
-      meanX /= (count);
-      meanY /= (count);
-      return [meanX - boid.x, meanY - boid.y];
+      meanPos = meanPos.div(count);
+      return meanPos.sub(boid.pos);
+    } else {
+      return meanPos
     }
-    return [0, 0];
   }
 
   calcSeparation(boid) {
     // Calculates separative force to boid
-    let dv = [0, 0];
+    let force = new Vector2D(0, 0);
 
     for (let otherBoid of this.population) {
       if (otherBoid === boid) continue;
-      let dist = Math.sqrt( (otherBoid.x - boid.x) ** 2 
-                            + (otherBoid.y - boid.y) ** 2 );
+
+      let dist = (otherBoid.pos.sub(boid.pos)).magnitude();
       if (dist <= 18) {
         // Add to repelling force if neighbour boid is too close
-        dv[0] += (boid.x - otherBoid.x) / dist;
-        dv[1] += (boid.y - otherBoid.y) / dist;
+        // Repelling force is inversely proportional to distance
+        force = force.add( (boid.pos.sub(otherBoid.pos)).div(dist) );
       }
     }
 
-    return dv;
+    return force;
   }
 
   calcAlignment(boid) {
     // Calculates alignment force to boid
-    let meanVx = 0;
-    let meanVy = 0;
+    let meanVelocity = new Vector2D(0, 0);
     let count = 0;
 
     for (let otherBoid of this.population) {
       if (otherBoid === boid) continue;
 
-      let dist = Math.sqrt((otherBoid.x - boid.x)**2 + (otherBoid.y - boid.y)**2);
+      let dist = (otherBoid.pos.sub(boid.pos)).magnitude();
       if (dist <= 40) {
-        meanVx += otherBoid.v[0];
-        meanVy += otherBoid.v[1];
+        meanVelocity = meanVelocity.add(otherBoid.vel);
         count += 1;
       }
     }
 
     if (count > 0) {
-      meanVx /= count;
-      meanVy /= count;
-      return [meanVx, meanVy];
+      meanVelocity = meanVelocity.div(count);
     }
-    return [0, 0];
+
+    return meanVelocity;
   }
 
   calcMouseAvoidance(boid) {
     // Calculates force needed to avoid mouse
-    let dist = Math.sqrt((mouse.x - boid.x)**2 + (mouse.y - boid.y)**2);
+    let dist = mouse.pos.sub(boid.pos).magnitude();
     if (dist < mouse.radius) {
-      return [boid.x - mouse.x, boid.y - mouse.y];
+      return boid.pos.sub(mouse.pos);
     }
-    return [0, 0];
+    return new Vector2D(0, 0);
   }
 
 }
 
-class Vector2D {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
-
-  add(otherVector) {
-    if (!otherVector instanceof Vector2D) {
-      throw (new TypeError('Argument must be a 2D Vector.'));
-      return;
-    }
-    let newX = this.x + otherVector.x;
-    let newY = this.y + otherVector.y;
-    return new Vector2D(newX, newY);
-  }
-
-  sub(otherVector) {
-    if (!otherVector instanceof Vector2D) {
-      throw (new TypeError('Argument must be a 2D Vector.'));
-      return;
-    }
-    let newX = this.x - otherVector.x;
-    let newY = this.y - otherVector.y;
-    return new Vector2D(newX, newY);
-  }
-
-  mul(A) {
-    // Performs scalar (dot) multiplication by A
-    try {
-      let newX = this.x * A;
-      let newY = this.y * A;
-      return new Vector2D(newX, newY);
-    } catch {
-      throw (new TypeError('Argument must be a scalar number'));
-      return;
-    }
-  }
-}
 
 /**** DRIVER CODE ****/
 
@@ -269,17 +262,17 @@ const populationDensity = 3000;
 let populationSize = Math.floor(
   window.innerHeight * window.innerWidth / populationDensity
 );
-populationSize = 0;
 
 for (let i = 0; i < populationSize; i++) {
   let x = Math.random() * window.innerWidth;
   let y = Math.random() * window.innerHeight;
-  let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
-  f.population.push(new Boid(x, y, v));
+  let vx = Math.random() * 2 - 1;
+  let vy = Math.random() * 2 - 1;
+  f.population.push(new Boid(x, y, vx, vy));
 }
 
 // Animate
-let lastRender = 0;
+let lastRender = Date.now();
 const fps = 90;
 let rAF = requestAnimationFrame(animate);
 
@@ -317,8 +310,9 @@ window.onresize = function() {
     for (let i = 0; i < populationDeficit; i++) {
       let x = Math.random() * window.innerWidth;
       let y = Math.random() * window.innerHeight;
-      let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
-      f.population.push(new Boid(x, y, v));
+      let vx = Math.random() * 2 - 1;
+      let vy = Math.random() * 2 - 1;
+      f.population.push(new Boid(x, y, vx, vy));
     }
   } else {
     // Too many boids -- remove
@@ -333,13 +327,14 @@ window.onresize = function() {
 
 // Mouse events
 window.addEventListener('mousemove', function(e) {
-  mouse.x = e.x;
-  mouse.y = e.y;
+  mouse.pos.x = e.x;
+  mouse.pos.y = e.y;
 });
 
 window.addEventListener('click', function(e) {
-  let v = [Math.random() * 2 - 1, Math.random() * 2 - 1];
-  f.population.push(new Boid(mouse.x, mouse.y, v));
+  let vx = Math.random() * 2 - 1;
+  let vy = Math.random() * 2 - 1;
+  f.population.push(new Boid(mouse.pos.x, mouse.pos.y, vx, vy));
 });
 
 
