@@ -104,11 +104,12 @@ class Boid {
     let newAngle = this.vel.angle();
 
     // Limit turn speed
+    const turnSpeed = 0.1;
     let angleDiff = newAngle - this.angle;
-    if (angleDiff > 0.15) {
-      this.angle += 0.15;
+    if (angleDiff > turnSpeed) {
+      this.angle += turnSpeed;
     } else if (angleDiff < -0.15) {
-      this.angle -= 0.15
+      this.angle -= turnSpeed;
     } else {
       this.angle += angleDiff;
     }
