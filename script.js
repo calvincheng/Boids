@@ -40,6 +40,7 @@ class Boid {
     this.y = y;
     this.v = v;
     this.angle = Math.atan2(this.v[1], this.v[0]);
+    // Hacky fix based off of observation -- TODO: look into atan2 vs atan
     if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
       this.angle = (this.angle + Math.PI) % (2 * Math.PI);
     }
@@ -52,6 +53,7 @@ class Boid {
   draw(ctx) {
     // Calculate orientation
     let newAngle = Math.atan2(this.v[1], this.v[0]);
+    // Hacky fix based off of observation -- TODO: look into atan2 vs atan
     if ((this.v[0] > 0 && this.v[1] > 0) || (this.v[0] < 0 && this.v[1] < 0)) {
       newAngle = (newAngle + Math.PI) % (2 * Math.PI);
     }
@@ -108,11 +110,11 @@ class Flock {
 
       // Apply forces
       boid.v[0] += (0.003 * dv_coh[0] + 0.5 * dv_sep[0] 
-                    + 0.08 * dv_ali[0] + 0.1 * dv_mou[0] 
-                    + Math.random() * 0.6 - 0.3);
+                    + 0.08 * dv_ali[0] + 0.1 * dv_mou[0])
+//                    + Math.random() * 0.6 - 0.3);
       boid.v[1] += (0.003 * dv_coh[1] + 0.5 * dv_sep[1] 
-                    + 0.08 * dv_ali[1] + 0.1 * dv_mou[1] 
-                    + Math.random() * 0.6 - 0.3);
+                    + 0.08 * dv_ali[1] + 0.1 * dv_mou[1] )
+//                    + Math.random() * 0.6 - 0.3);
 
       // Enforce speed limits
       if (boid.v[0] > speedLimit) {
@@ -220,6 +222,45 @@ class Flock {
 
 }
 
+class Vector2D {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  add(otherVector) {
+    if (!otherVector instanceof Vector2D) {
+      throw (new TypeError('Argument must be a 2D Vector.'));
+      return;
+    }
+    let newX = this.x + otherVector.x;
+    let newY = this.y + otherVector.y;
+    return new Vector2D(newX, newY);
+  }
+
+  sub(otherVector) {
+    if (!otherVector instanceof Vector2D) {
+      throw (new TypeError('Argument must be a 2D Vector.'));
+      return;
+    }
+    let newX = this.x - otherVector.x;
+    let newY = this.y - otherVector.y;
+    return new Vector2D(newX, newY);
+  }
+
+  mul(A) {
+    // Performs scalar (dot) multiplication by A
+    try {
+      let newX = this.x * A;
+      let newY = this.y * A;
+      return new Vector2D(newX, newY);
+    } catch {
+      throw (new TypeError('Argument must be a scalar number'));
+      return;
+    }
+  }
+}
+
 /**** DRIVER CODE ****/
 
 // Populate flock
@@ -228,6 +269,7 @@ const populationDensity = 3000;
 let populationSize = Math.floor(
   window.innerHeight * window.innerWidth / populationDensity
 );
+populationSize = 0;
 
 for (let i = 0; i < populationSize; i++) {
   let x = Math.random() * window.innerWidth;
