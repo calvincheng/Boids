@@ -260,9 +260,11 @@ class Flock {
 // Populate flock
 let f = new Flock([]);
 const populationDensity = 3000;
+const populationLimit = 450;
 let populationSize = Math.floor(
   window.innerHeight * window.innerWidth / populationDensity
 );
+populationSize = Math.min(populationSize, populationLimit);
 
 for (let i = 0; i < populationSize; i++) {
   let x = Math.random() * window.innerWidth;
@@ -304,8 +306,9 @@ window.onresize = function() {
   populationSize = Math.floor(
     window.innerHeight * window.innerWidth / populationDensity
   );
-  let populationDeficit = populationSize - f.population.length;
+  populationSize = Math.min(populationSize, populationLimit);
 
+  let populationDeficit = populationSize - f.population.length;
   if (populationDeficit > 0) {
     // Not enough boids -- add
     for (let i = 0; i < populationDeficit; i++) {
@@ -332,10 +335,22 @@ window.addEventListener('mousemove', function(e) {
   mouse.pos.y = e.y;
 });
 
+let timeout;
 window.addEventListener('click', function(e) {
-  let vx = Math.random() * 2 - 1;
-  let vy = Math.random() * 2 - 1;
-  f.population.push(new Boid(mouse.pos.x, mouse.pos.y, vx, vy));
+  if (f.population.length >= populationLimit) {
+    clearTimeout(timeout);
+
+    const warning = document.querySelector('.warning');
+    warning.style.display = 'inline';
+    warning.style.opacity = 1;
+
+    timeout = setTimeout(() => {warning.style.display = 'none'; 
+      warning.style.opacity = 0;}, 1500);
+  } else {
+    let vx = Math.random() * 2 - 1;
+    let vy = Math.random() * 2 - 1;
+    f.population.push(new Boid(mouse.pos.x, mouse.pos.y, vx, vy));
+  }
 });
 
 

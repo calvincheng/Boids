@@ -52,6 +52,13 @@ p {
   fill: #bfbfbf;
 }
 
+.warning {
+  color: darkred;
+  display: none;
+  opacity: 0;
+  transform: opacity 0.4s ease-in-out;
+}
+
 #canvas {
   position: absolute;
   height: 100%;
