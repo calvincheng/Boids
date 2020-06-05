@@ -28,6 +28,7 @@ class Vector2D {
   }
 
   add(otherVector) {
+    // Performs vector addition
     if (!otherVector instanceof Vector2D) {
       throw (new TypeError('Argument must be a 2D Vector.'));
       return;
@@ -54,14 +55,17 @@ class Vector2D {
   }
 
   div(A) {
+    // Performs vector division
     return this.mul(1 / A);
   }
 
   magnitude() {
+    // Returns vector magnitude
     return Math.sqrt(this.x**2 + this.y**2);
   }
 
   angle() {
+    // Returns vector angle in radians
     return Math.atan2(this.y, this.x);
   }
 
@@ -106,6 +110,14 @@ class Boid {
     // Limit turn speed
     const turnSpeed = 0.1;
     let angleDiff = newAngle - this.angle;
+
+    // Limit angle difference to +-PI
+    if (angleDiff > Math.PI) {
+      angleDiff = -(2 * Math.PI - angleDiff);
+    } else if (angleDiff < -Math.PI) {
+      angleDiff = 2 * Math.PI + angleDiff;
+    }
+
     if (angleDiff > turnSpeed) {
       this.angle += turnSpeed;
     } else if (angleDiff < -0.15) {
@@ -181,7 +193,7 @@ class Flock {
   }
 
   calcCohesion(boid) {
-    // Calculates cohesive force to boid
+    // Calculates cohesive force for boid to flock
     let meanPos = new Vector2D(0, 0);
     let count = 0;
 
@@ -204,7 +216,7 @@ class Flock {
   }
 
   calcSeparation(boid) {
-    // Calculates separative force to boid
+    // Calculates separative force for boid against other boids
     let force = new Vector2D(0, 0);
 
     for (let otherBoid of this.population) {
@@ -222,7 +234,7 @@ class Flock {
   }
 
   calcAlignment(boid) {
-    // Calculates alignment force to boid
+    // Calculates alignment force for boid to flock
     let meanVelocity = new Vector2D(0, 0);
     let count = 0;
 
@@ -244,7 +256,7 @@ class Flock {
   }
 
   calcMouseAvoidance(boid) {
-    // Calculates force needed to avoid mouse
+    // Calculates repulsion force for boid against cursor
     let dist = mouse.pos.sub(boid.pos).magnitude();
     if (dist < mouse.radius) {
       return boid.pos.sub(mouse.pos);
@@ -265,6 +277,7 @@ let populationSize = Math.floor(
   window.innerHeight * window.innerWidth / populationDensity
 );
 populationSize = Math.min(populationSize, populationLimit);
+populationSize = 1;
 
 for (let i = 0; i < populationSize; i++) {
   let x = Math.random() * window.innerWidth;
