@@ -277,7 +277,6 @@ let populationSize = Math.floor(
   window.innerHeight * window.innerWidth / populationDensity
 );
 populationSize = Math.min(populationSize, populationLimit);
-populationSize = 1;
 
 for (let i = 0; i < populationSize; i++) {
   let x = Math.random() * window.innerWidth;
